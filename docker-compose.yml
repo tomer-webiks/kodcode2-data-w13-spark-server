@@ -1,0 +1,77 @@
+version: '3.8'
+services:
+  namenode:
+    image: apache/hadoop:3
+    container_name: namenode
+    hostname: namenode
+    user: root
+    ports:
+      - 9870:9870
+      - 8020:8020
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+    env_file:
+      - ./dev.env
+    command: ["hdfs", "namenode"]
+    networks:
+      - shared-network
+
+  datanode_1:
+    image: apache/hadoop:3
+    container_name: datanode1
+    hostname: datanode1
+    user: root
+    ports:
+      - 9865:9865
+    depends_on:
+      - namenode
+    command: [ "hdfs", "datanode" ]
+    env_file:
+      - ./dev.env
+    networks:
+      - shared-network
+  
+  datanode_2:
+    image: apache/hadoop:3
+    container_name: datanode2
+    hostname: datanode2
+    user: root
+    ports:
+      - 9864:9864
+    depends_on:
+      - namenode
+    command: [ "hdfs", "datanode" ]
+    env_file:
+      - ./dev.env
+    networks:
+      - shared-network
+
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+    ports:
+      - "8080:8080" # Spark Web UI
+      - "7077:7077" # Spark Master Port
+    networks:
+      - shared-network
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    ports:
+      - "8081:8081" # Spark Worker Web UI
+    depends_on:
+      - spark-master
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    driver: bridge
