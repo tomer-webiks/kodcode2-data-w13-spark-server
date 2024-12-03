@@ -1,4 +1,5 @@
-version: '3.8'
+version: '3.9'
+
 services:
   namenode:
     image: apache/hadoop:3
@@ -14,27 +15,13 @@ services:
       - ./dev.env
     command: ["hdfs", "namenode"]
     networks:
-      - shared-network
+      shared-network:
+        ipv4_address: 192.168.1.100
 
   datanode_1:
     image: apache/hadoop:3
     container_name: datanode1
     hostname: datanode1
-    user: root
-    ports:
-      - 9865:9865
-    depends_on:
-      - namenode
-    command: [ "hdfs", "datanode" ]
-    env_file:
-      - ./dev.env
-    networks:
-      - shared-network
-  
-  datanode_2:
-    image: apache/hadoop:3
-    container_name: datanode2
-    hostname: datanode2
     user: root
     ports:
       - 9864:9864
@@ -44,34 +31,57 @@ services:
     env_file:
       - ./dev.env
     networks:
-      - shared-network
-
+      shared-network:
+        ipv4_address: 192.168.1.101
+  
+  datanode_2:
+    image: apache/hadoop:3
+    container_name: datanode2
+    hostname: datanode2
+    user: root
+    ports:
+      - 9865:9865
+    depends_on:
+      - namenode
+    command: [ "hdfs", "datanode" ]
+    env_file:
+      - ./dev.env
+    networks:
+      shared-network:
+        ipv4_address: 192.168.1.102
 
   spark-master:
     image: bitnami/spark:latest
     container_name: spark-master
     environment:
       - SPARK_MODE=master
-      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
     ports:
       - "8080:8080" # Spark Web UI
       - "7077:7077" # Spark Master Port
     networks:
-      - shared-network
+      shared-network:
+        ipv4_address: 192.168.1.103
 
   spark-worker:
     image: bitnami/spark:latest
     container_name: spark-worker
     environment:
       - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_MASTER_URL=spark://192.168.1.103:7077
     ports:
       - "8081:8081" # Spark Worker Web UI
     depends_on:
       - spark-master
     networks:
-      - shared-network
+      shared-network:
+        ipv4_address: 192.168.1.104
 
 networks:
   shared-network:
+    name: shared-network
     driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
